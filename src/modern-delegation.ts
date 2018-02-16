@@ -12,6 +12,7 @@ interface useCapture {
   passive: true;
 }
 
+const listenerMap: Map<HTMLElement, Map<string, Function>> = new Map();
 const eventObject:eventObject = {};
 let i: number = 0;
 
@@ -56,7 +57,13 @@ function addListenerToMap (element, type, selector, callback, useCapture): numbe
   i++;
 
   // Create a new event listener if neccessary
-  if (addNewEventListener) element.addEventListener(type, getListenerFn(element, evtTypeCapture), useCapture);
+  if (addNewEventListener) {
+    const listenerFn = getListenerFn(element, evtTypeCapture);
+
+    if (!listenerMap.has(element)) listenerMap.set(element, new Map());
+    if (!listenerMap.get(element).has(evtTypeCapture)) listenerMap.get(element).set(evtTypeCapture, listenerFn);
+    element.addEventListener(type, listenerFn, useCapture);
+  }
 
   return i;
 }
@@ -80,7 +87,11 @@ function removeListenerFromMap (element, type, selector, useCapture, callbackInd
   }
 
   // Remove event listener if neccessary
-  if (removeTheEventListener) element.removeEventListener(type, getListenerFn(element, evtTypeCapture), useCapture);
+  if (removeTheEventListener) {
+    element.removeEventListener(type, listenerMap.get(element).get(evtTypeCapture), useCapture);
+    listenerMap.get(element).delete(evtTypeCapture);
+    if (!listenerMap.get(element).size) listenerMap.delete(element);
+  }
 }
 
 export default function delegate(element: HTMLElement, type: string, selector: string, callback: EventListener, useCapture: boolean|useCapture = false): delegateObject {
